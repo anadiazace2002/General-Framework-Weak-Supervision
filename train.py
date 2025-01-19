@@ -140,6 +140,7 @@ def get_config():
         parser.add_argument(argument.name, type=argument.type, default=argument.default, help=argument.help, *argument.args, **argument.kwargs)
 
     args = parser.parse_args()
+    print(f"Configuración YAML: {args.c}")
     over_write_args_from_file(args, args.c)
     return args
 

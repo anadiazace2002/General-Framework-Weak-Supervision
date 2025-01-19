@@ -4,6 +4,10 @@
 import argparse
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
+# changed the line below
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
+
 import random
 import warnings
 
@@ -140,6 +144,7 @@ def get_config():
         parser.add_argument(argument.name, type=argument.type, default=argument.default, help=argument.help, *argument.args, **argument.kwargs)
 
     args = parser.parse_args()
+    # changed the line below
     print(f"Configuración YAML: {args.c}")
     over_write_args_from_file(args, args.c)
     return args
@@ -208,6 +213,7 @@ def main_worker(gpu, ngpus_per_node, args):
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+    # changed the line below
     cudnn.deterministic = False
     cudnn.benchmark = True
 

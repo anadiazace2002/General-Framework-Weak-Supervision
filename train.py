@@ -177,7 +177,7 @@ def main(args):
                       'from checkpoints.')
     
     if args.gpu == 'None':
-        args.gpu = None
+        args.gpu = 0  # changed the line 
         
     if args.gpu is not None:
         warnings.warn('You have chosen a specific GPU. This will completely '
@@ -204,6 +204,8 @@ def main_worker(gpu, ngpus_per_node, args):
     '''
     main_worker is conducted on each GPU.
     '''
+    #changed the line below
+    torch.backends.cudnn.enabled = False
 
     global best_acc1
     args.gpu = gpu
@@ -214,7 +216,7 @@ def main_worker(gpu, ngpus_per_node, args):
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     # changed the line below
-    cudnn.deterministic = False
+    cudnn.deterministic = True
     cudnn.benchmark = True
 
     # SET UP FOR DISTRIBUTED TRAINING

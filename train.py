@@ -257,16 +257,16 @@ def main_worker(gpu, ngpus_per_node, args):
     model.model = DDP(model.model, device_ids=[gpu], find_unused_parameters=False)
     
     if args.resume:
-    if args.load_path is None:
-        raise Exception("Resume requires --load_path.")
-    if os.path.exists(args.load_path):
-        try:
-            model.load_model(args.load_path)
-        except Exception as e:
-            logger.warning(f"Failed to resume model from {args.load_path}: {e}")
-            args.resume = False
-    else:
-        logger.warning(f"Load path {args.load_path} does not exist. Starting from scratch.")
+        if args.load_path is None:
+            raise Exception("Resume requires --load_path.")
+        if os.path.exists(args.load_path):
+            try:
+                model.load_model(args.load_path)
+            except Exception as e:
+                logger.warning(f"Failed to resume model from {args.load_path}: {e}")
+                args.resume = False
+        else:
+            logger.warning(f"Load path {args.load_path} does not exist. Starting from scratch.")
 
     # START TRAINING of FixMatch
     logger.info("Model training")

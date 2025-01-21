@@ -3,7 +3,6 @@
 
 import argparse
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # changed the line below
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
@@ -19,6 +18,7 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 
 from src.algorithms import name2alg
@@ -177,7 +177,7 @@ def main(args):
                       'from checkpoints.')
     
     if args.gpu == 'None':
-        args.gpu = 0  # changed the line 
+        args.gpu = None  # changed the line 
         
     if args.gpu is not None:
         warnings.warn('You have chosen a specific GPU. This will completely '
@@ -204,18 +204,13 @@ def main_worker(gpu, ngpus_per_node, args):
     '''
     main_worker is conducted on each GPU.
     '''
-    #changed the line below
-    torch.backends.cudnn.enabled = False
+    # Set the CUDA_VISIBLE_DEVICES to the GPU assigned to this worker
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 
-    global best_acc1
-    args.gpu = gpu
-
-    # random seed has to be set for the synchronization of labeled data sampling in each process.
-    assert args.seed is not None
+    # Random seed setup
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
-    # changed the line below
     cudnn.deterministic = True
     cudnn.benchmark = True
 
@@ -245,34 +240,43 @@ def main_worker(gpu, ngpus_per_node, args):
     # optimizer, scheduler, datasets, dataloaders with be set in algorithms
     model = name2alg[args.algorithm](args, tb_log, logger)
     logger.info(f'Number of Trainable Params: {count_parameters(model.model)}')
-
+    
+    def send_model_cuda(args, model, clip_batch=True):
+        if args.gpu is not None:
+            model = model.to(f'cuda:{args.gpu}')
+        else:
+            model = model.to('cuda')
+        return model
+        
     # SET Devices for (Distributed) DataParallel
     model.model = send_model_cuda(args, model.model)
-    # TODO: take care of ema model # NOTE
     if model.ema_model is not None:
         model.ema_model = send_model_cuda(args, model.ema_model, clip_batch=False)
     logger.info(f"Arguments: {model.args}")
-
-    # If args.resume, load checkpoints from args.load_path
-    if args.resume and os.path.exists(args.load_path):
+    
+    model.model = DDP(model.model, device_ids=[gpu], find_unused_parameters=False)
+    
+    if args.resume:
+    if args.load_path is None:
+        raise Exception("Resume requires --load_path.")
+    if os.path.exists(args.load_path):
         try:
             model.load_model(args.load_path)
-        except:
-            logger.info("Fail to resume load path {}".format(args.load_path))    
+        except Exception as e:
+            logger.warning(f"Failed to resume model from {args.load_path}: {e}")
             args.resume = False
     else:
-        logger.info("Resume load path {} does not exist".format(args.load_path))
+        logger.warning(f"Load path {args.load_path} does not exist. Starting from scratch.")
 
     # START TRAINING of FixMatch
     logger.info("Model training")
     model.train()
-
-    # print validation (and test results)
+    
+     # print validation (and test results)
     for key, item in model.results_dict.items():
         logger.info(f"Model result - {key} : {item}")
 
     logger.warning(f"GPU {args.rank} training is FINISHED")
-
 
 if __name__ == "__main__":
     args = get_config()

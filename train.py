@@ -9,7 +9,7 @@ os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
 
 import random
 import warnings
-
+# warnings.filterwarnings("ignore", category=UserWarning)
 import numpy as np
 import torch
 # torch.autograd.set_detect_anomaly(True)
@@ -211,8 +211,8 @@ def main_worker(gpu, ngpus_per_node, args):
     random.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
-    cudnn.deterministic = True
-    cudnn.benchmark = True
+    cudnn.deterministic = False
+    cudnn.benchmark = False
 
     # SET UP FOR DISTRIBUTED TRAINING
     if args.distributed:

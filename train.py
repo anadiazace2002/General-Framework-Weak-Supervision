@@ -196,8 +196,9 @@ def main(args):
         args.world_size = ngpus_per_node * args.world_size
 
         # args=(,) means the arguments of main_worker
-        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+        # mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args)) # lo he comentado yo
     else:
+        args.world_size = 1 # changed
         main_worker(args.gpu, ngpus_per_node, args)
 
 

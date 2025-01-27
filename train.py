@@ -196,8 +196,8 @@ def main(args):
     print(f"args.world_size: {args.world_size}")  # Comprobación de world_size
 
     # distributed: true if manually selected or if world_size > 1
-    args.distributed = args.world_size > 1 or args.multiprocessing_distributed
-    ngpus_per_node = torch.cuda.device_count()  # number of gpus of each node
+    args.distributed = args.world_size > 1 # or args.multiprocessing_distributed
+    ngpus_per_node = 1 # torch.cuda.device_count()  # number of gpus of each node
     print(f"Number of GPUs in the node: {ngpus_per_node}")  # Comprobación de la cantidad de GPUs
 
     if args.multiprocessing_distributed:

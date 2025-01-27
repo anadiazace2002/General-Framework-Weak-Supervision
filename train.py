@@ -149,26 +149,30 @@ def get_config():
     over_write_args_from_file(args, args.c)
     return args
 
-
-
 def main(args):
     '''
     For (Distributed)DataParallelism,
     main(args) spawn each process (main_worker) to each GPU.
     '''
-    print("entra_main")
+    print("entra_main")  # Comprobación inicial
+    
     save_path = os.path.join(args.save_dir, args.save_name)
+    print(f"save_path: {save_path}")  # Comprobación del path de guardado
+    
     if os.path.exists(save_path) and args.overwrite and args.resume == False:
         import shutil
         shutil.rmtree(save_path)
+        print(f"Removed existing save directory: {save_path}")
+    
     if os.path.exists(save_path) and not args.overwrite:
-        raise Exception('already existing model: {}'.format(save_path))
+        raise Exception(f'Already existing model: {save_path}')
+    
     if args.resume:
         if args.load_path is None:
             raise Exception('Resume of training requires --load_path in the args')
         if os.path.abspath(save_path) == os.path.abspath(args.load_path) and not args.overwrite:
-            raise Exception('Saving & Loading paths are same. \
-                            If you want over-write, give --overwrite in the argument.')
+            raise Exception('Saving & Loading paths are same. If you want over-write, give --overwrite in the argument.')
+        print("Resuming training from load_path: ", args.load_path)
 
     if args.seed is not None:
         warnings.warn('You have chosen to seed training. '
@@ -176,36 +180,41 @@ def main(args):
                       'which can slow down your training considerably! '
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
+        print(f"Random seed set to: {args.seed}")
     
     if args.gpu == 'None':
         args.gpu = None  # changed the line 
-        
+    print(f"GPU selected: {args.gpu}")  # Comprobación del GPU
+    
     if args.gpu is not None:
         warnings.warn('You have chosen a specific GPU. This will completely '
                       'disable data parallelism.')
+        print("Warning: GPU selected disables data parallelism.")
 
     if args.dist_url == "env://" and args.world_size == -1:
         args.world_size = int(os.environ["WORLD_SIZE"])
+    print(f"args.world_size: {args.world_size}")  # Comprobación de world_size
 
     # distributed: true if manually selected or if world_size > 1
     args.distributed = args.world_size > 1 or args.multiprocessing_distributed
     ngpus_per_node = torch.cuda.device_count()  # number of gpus of each node
+    print(f"Number of GPUs in the node: {ngpus_per_node}")  # Comprobación de la cantidad de GPUs
 
     if args.multiprocessing_distributed:
         # now, args.world_size means num of total processes in all nodes
         args.world_size = ngpus_per_node * args.world_size
-
-        # args=(,) means the arguments of main_worker
-        # mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args)) # lo he comentado yo
+        print(f"Distributed setup: world_size = {args.world_size}")
     else:
-        args.world_size = 1 # changed
+        args.world_size = 1  # changed
+        print("Single GPU setup, world_size set to 1.")
         main_worker(args.gpu, ngpus_per_node, args)
-
 
 def main_worker(gpu, ngpus_per_node, args):
     '''
     main_worker is conducted on each GPU.
     '''
+    print(f"Entering main_worker for GPU {gpu}")
+    
     # Set the CUDA_VISIBLE_DEVICES to the GPU assigned to this worker
     os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 
@@ -215,14 +224,16 @@ def main_worker(gpu, ngpus_per_node, args):
     np.random.seed(args.seed)
     cudnn.deterministic = False
     cudnn.benchmark = False
-
+    print("Random seeds and CUDA setup done.")
+    
     # SET UP FOR DISTRIBUTED TRAINING
     if args.distributed:
+        print("Setting up distributed training...")
         if args.dist_url == "env://" and args.rank == -1:
             args.rank = int(os.environ["RANK"])
-
         if args.multiprocessing_distributed:
             args.rank = args.rank * ngpus_per_node + gpu  # compute global rank
+        print(f"Distributed rank for this process: {args.rank}")
 
         # set distributed group:
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
@@ -230,6 +241,8 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # SET save_path and logger
     save_path = os.path.join(args.save_dir, args.save_name)
+    print(f"Final save_path: {save_path}")
+    
     logger_level = "WARNING"
     tb_log = None
     if args.rank % ngpus_per_node == 0:
@@ -238,7 +251,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     logger = get_logger(args.save_name, save_path, logger_level)
     logger.info(f"Use GPU: {args.gpu} for training")
-
+    
     # optimizer, scheduler, datasets, dataloaders with be set in algorithms
     model = name2alg[args.algorithm](args, tb_log, logger)
     logger.info(f'Number of Trainable Params: {count_parameters(model.model)}')
@@ -257,13 +270,15 @@ def main_worker(gpu, ngpus_per_node, args):
     logger.info(f"Arguments: {model.args}")
     
     model.model = DDP(model.model, device_ids=[gpu], find_unused_parameters=False)
-    
+    print("Model wrapped in DDP.")
+
     if args.resume:
         if args.load_path is None:
             raise Exception("Resume requires --load_path.")
         if os.path.exists(args.load_path):
             try:
                 model.load_model(args.load_path)
+                print(f"Model loaded from {args.load_path}")
             except Exception as e:
                 logger.warning(f"Failed to resume model from {args.load_path}: {e}")
                 args.resume = False
@@ -273,12 +288,14 @@ def main_worker(gpu, ngpus_per_node, args):
     # START TRAINING of FixMatch
     logger.info("Model training")
     model.train()
-    
-     # print validation (and test results)
+
+    # print validation (and test results)
     for key, item in model.results_dict.items():
         logger.info(f"Model result - {key} : {item}")
+        print(f"Model result - {key} : {item}")  # Comprobación de los resultados
 
     logger.warning(f"GPU {args.rank} training is FINISHED")
+    print(f"GPU {args.rank} training is FINISHED")
 
 if __name__ == "__main__":
     args = get_config()

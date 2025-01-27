@@ -9,7 +9,7 @@ os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
 
 import random
 import warnings
-# warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 import numpy as np
 import torch
 # torch.autograd.set_detect_anomaly(True)
@@ -156,6 +156,7 @@ def main(args):
     For (Distributed)DataParallelism,
     main(args) spawn each process (main_worker) to each GPU.
     '''
+    print("entra_main")
     save_path = os.path.join(args.save_dir, args.save_name)
     if os.path.exists(save_path) and args.overwrite and args.resume == False:
         import shutil

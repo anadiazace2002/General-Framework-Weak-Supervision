@@ -155,7 +155,8 @@ def main(args):
     main(args) spawn each process (main_worker) to each GPU.
     '''
     print("entra_main")  # Comprobación inicial
-    
+    args.multiprocessing_distributed = False
+
     save_path = os.path.join(args.save_dir, args.save_name)
     print(f"save_path: {save_path}")  # Comprobación del path de guardado
     
@@ -183,7 +184,7 @@ def main(args):
         print(f"Random seed set to: {args.seed}")
     
     if args.gpu == 'None':
-        args.gpu = None  # changed the line 
+        args.gpu = 0  # changed the line 
     print(f"GPU selected: {args.gpu}")  # Comprobación del GPU
     
     if args.gpu is not None:

@@ -59,7 +59,7 @@ class AlgorithmBase:
 
         self.print_fn = print if logger is None else logger.info
         self.ngpus_per_node = torch.cuda.device_count()
-        self.loss_scaler = GradScaler()
+        self.loss_scaler = GradScaler('cuda')
         self.amp_cm = autocast if self.use_amp else contextlib.nullcontext
         self.gpu = args.gpu
         self.rank = args.rank

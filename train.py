@@ -270,8 +270,10 @@ def main_worker(gpu, ngpus_per_node, args):
         model.ema_model = send_model_cuda(args, model.ema_model, clip_batch=False)
     logger.info(f"Arguments: {model.args}")
     
+    '''
     model.model = DDP(model.model, device_ids=[gpu], find_unused_parameters=False)
     print("Model wrapped in DDP.")
+    '''
 
     if args.resume:
         if args.load_path is None:
